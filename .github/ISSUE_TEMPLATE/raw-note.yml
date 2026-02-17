@@ -1,0 +1,33 @@
+name: Raw Note
+description: Submit rough technical notes to generate a structured daily report
+title: "[RAW] YYYY-MM-DD - Topic"
+labels: ["raw-note"]
+body:
+  - type: input
+    id: date
+    attributes:
+      label: Date
+      placeholder: "YYYY-MM-DD"
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Rough Notes
+      description: Paste your raw notes, logs, blockers, and next ideas.
+      placeholder: |
+        - Today I tried...
+        - I got blocked by...
+        - I learned...
+        - Next...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: Generate structured report from this issue.
+          required: true

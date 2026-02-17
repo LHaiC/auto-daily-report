@@ -1,0 +1,99 @@
+name: Generate Structured Report From Issue
+
+on:
+  issues:
+    types: [opened, edited, reopened, labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  generate:
+    if: |
+      contains(github.event.issue.labels.*.name, 'raw-note') ||
+      startsWith(github.event.issue.title, '[RAW]')
+    runs-on: ubuntu-latest
+    environment: report-gen
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build scratch file from issue body
+        id: issuefile
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          python - <<'PY'
+          import os, pathlib, datetime
+          num = os.environ["ISSUE_NUMBER"]
+          title = os.environ.get("ISSUE_TITLE","")
+          body = os.environ.get("ISSUE_BODY","") or ""
+          p = pathlib.Path("scratch") / f"issue-{num}.md"
+          p.parent.mkdir(parents=True, exist_ok=True)
+          p.write_text(f"# {title}\n\n{body}\n", encoding="utf-8")
+          print(f"wrote {p}")
+          now = datetime.datetime.utcnow()
+          report_dir = pathlib.Path("content/daily") / now.strftime("%Y") / now.strftime("%m")
+          report_dir.mkdir(parents=True, exist_ok=True)
+          report_path = report_dir / f"{now.strftime('%Y-%m-%d')}-issue-{num}.md"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"scratch_path={p}\n")
+              f.write(f"report_path={report_path}\n")
+          PY
+
+      - name: Generate report from issue
+        env:
+          REPORT_API_URL: ${{ vars.REPORT_API_URL }}
+          REPORT_API_MODEL: ${{ vars.REPORT_API_MODEL }}
+          REPORT_API_AUTH_HEADER: ${{ vars.REPORT_API_AUTH_HEADER }}
+          REPORT_API_AUTH_SCHEME: ${{ vars.REPORT_API_AUTH_SCHEME }}
+          REPORT_API_TIMEOUT: ${{ vars.REPORT_API_TIMEOUT }}
+          REPORT_API_RESPONSE_PATH: ${{ vars.REPORT_API_RESPONSE_PATH }}
+          REPORT_API_EXTRA_HEADERS_JSON: ${{ vars.REPORT_API_EXTRA_HEADERS_JSON }}
+          REPORT_API_REQUEST_TEMPLATE_JSON: ${{ vars.REPORT_API_REQUEST_TEMPLATE_JSON }}
+          REPORT_SYSTEM_PROMPT: ${{ vars.REPORT_SYSTEM_PROMPT }}
+          REPORT_API_KEY: ${{ secrets.REPORT_API_KEY }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python scripts/generate_report.py \
+            --input "${{ steps.issuefile.outputs.scratch_path }}" \
+            --output "${{ steps.issuefile.outputs.report_path }}" \
+            --source-type issue \
+            --source-id "${ISSUE_NUMBER}"
+
+      - name: Commit generated report
+        id: commit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${{ steps.issuefile.outputs.scratch_path }}" "${{ steps.issuefile.outputs.report_path }}"
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "auto: generate report from issue #${{ github.event.issue.number }} [skip ci]"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Comment issue with report path
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number
+            const path = `${{ steps.issuefile.outputs.report_path }}`
+            const sha = context.sha
+            const body = `Generated structured report:\n\n- \`${path}\`\n- Commit: ${sha}`
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body
+            })

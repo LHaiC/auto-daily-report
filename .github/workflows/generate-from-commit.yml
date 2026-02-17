@@ -1,0 +1,82 @@
+name: Generate Structured Report From Commit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scratch/**"
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    # avoid loop when bot commits generated report
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    environment: report-gen
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Detect newly added scratch files
+        id: changed
+        run: |
+          # --diff-filter=A: only Added files; ignore modifications and deletions
+          CHANGED="$(git diff --diff-filter=A --name-only "${{ github.event.before }}" "${{ github.sha }}" | grep '^scratch/' || true)"
+          echo "changed<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Generate reports
+        if: steps.changed.outputs.changed != ''
+        env:
+          REPORT_API_URL: ${{ vars.REPORT_API_URL }}
+          REPORT_API_MODEL: ${{ vars.REPORT_API_MODEL }}
+          REPORT_API_AUTH_HEADER: ${{ vars.REPORT_API_AUTH_HEADER }}
+          REPORT_API_AUTH_SCHEME: ${{ vars.REPORT_API_AUTH_SCHEME }}
+          REPORT_API_TIMEOUT: ${{ vars.REPORT_API_TIMEOUT }}
+          REPORT_API_RESPONSE_PATH: ${{ vars.REPORT_API_RESPONSE_PATH }}
+          REPORT_API_EXTRA_HEADERS_JSON: ${{ vars.REPORT_API_EXTRA_HEADERS_JSON }}
+          REPORT_API_REQUEST_TEMPLATE_JSON: ${{ vars.REPORT_API_REQUEST_TEMPLATE_JSON }}
+          REPORT_SYSTEM_PROMPT: ${{ vars.REPORT_SYSTEM_PROMPT }}
+          REPORT_API_KEY: ${{ secrets.REPORT_API_KEY }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          DATE_UTC="$(date -u +%F)"
+          YEAR="$(date -u +%Y)"
+          MONTH="$(date -u +%m)"
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            stem="$(basename "$file")"
+            stem="${stem%.*}"
+            slug="$(echo "$stem" | tr ' ' '-' | tr -cd '[:alnum:]_-')"
+            outdir="content/daily/${YEAR}/${MONTH}"
+            mkdir -p "$outdir"
+            out="${outdir}/${DATE_UTC}-${slug}.md"
+            python scripts/generate_report.py \
+              --input "$file" \
+              --output "$out" \
+              --source-type commit \
+              --source-id "$SHA"
+            echo "Generated $out"
+          done <<< "${{ steps.changed.outputs.changed }}"
+
+      - name: Commit generated reports
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/daily/ || true
+          if git diff --cached --quiet; then
+            echo "No generated changes."
+            exit 0
+          fi
+          git commit -m "auto: generate structured reports from scratch notes [skip ci]"
+          git push

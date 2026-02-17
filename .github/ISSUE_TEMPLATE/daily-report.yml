@@ -1,0 +1,132 @@
+name: Daily Technical Report
+description: Record daily progress, blockers, learnings, and next actions.
+title: "[Daily Report] YYYY-MM-DD - Topic"
+labels: ["daily-report", "journal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for writing your daily report.
+        Keep it concrete, measurable, and reproducible.
+
+  - type: input
+    id: date
+    attributes:
+      label: Date
+      description: Use ISO format.
+      placeholder: "YYYY-MM-DD"
+    validations:
+      required: true
+
+  - type: input
+    id: focus
+    attributes:
+      label: Main Focus
+      description: What was today's primary technical objective?
+      placeholder: "e.g., Reproduce mHC experiment section 3.2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: completed
+    attributes:
+      label: What I Did Today
+      description: List concrete tasks completed.
+      placeholder: |
+        - Implemented ...
+        - Ran benchmark ...
+        - Read ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: blockers
+    attributes:
+      label: Problems / Blockers
+      description: What went wrong or got stuck?
+      placeholder: |
+        - Issue:
+        - Symptoms:
+        - When it happened:
+    validations:
+      required: true
+
+  - type: textarea
+    id: root_cause
+    attributes:
+      label: Root Cause Analysis
+      description: Why did the blocker happen?
+      placeholder: |
+        - Hypothesis 1:
+        - Evidence:
+        - Conclusion:
+    validations:
+      required: false
+
+  - type: textarea
+    id: attempts
+    attributes:
+      label: Attempts & Fixes Tried
+      description: What did you try and what was the result?
+      placeholder: |
+        - Attempt A -> result
+        - Attempt B -> result
+    validations:
+      required: true
+
+  - type: textarea
+    id: learnings
+    attributes:
+      label: Key Learnings
+      description: What did you learn today?
+      placeholder: |
+        - Insight 1
+        - Insight 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Metrics (Optional)
+      description: Add measurable outcomes.
+      placeholder: |
+        - Benchmark: +12.4%
+        - Tests: 128 passed
+        - Problems solved: 3
+    validations:
+      required: false
+
+  - type: textarea
+    id: next_steps
+    attributes:
+      label: Next Step Plan (Tomorrow)
+      description: Define actionable next tasks.
+      placeholder: |
+        - [ ] Task 1
+        - [ ] Task 2
+        - [ ] Task 3
+    validations:
+      required: true
+
+  - type: textarea
+    id: links
+    attributes:
+      label: References / Links (Optional)
+      description: PRs, commits, papers, blog posts, benchmark reports.
+      placeholder: |
+        - PR:
+        - Commit:
+        - Paper:
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Final Check
+      options:
+        - label: I included at least one measurable result.
+          required: true
+        - label: I wrote concrete next actions for tomorrow.
+          required: true
