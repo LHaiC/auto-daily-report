@@ -215,6 +215,7 @@ class WelcomeDialog(QDialog):
         # Name input
         name_label = QLabel("Note Title:")
         name_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 12px;")
+        name_label.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred) 
         left_layout.addWidget(name_label)
 
         self.name_input = QLineEdit()
@@ -224,6 +225,7 @@ class WelcomeDialog(QDialog):
         # Date input
         date_label = QLabel("Date:")
         date_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 12px;")
+        date_label.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
         left_layout.addWidget(date_label)
 
         self.date_input = QLineEdit()
@@ -880,7 +882,7 @@ class EnvSettingsDialog(QDialog):
 
         # Title
         title = QLabel("🔐 Environment Variables")
-        title.setStyleSheet("font-size: 20px; font-weight: bold; color: #212121;")
+        title.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {COLORS['text']};")
         layout.addWidget(title)
 
         # Help text
@@ -1319,6 +1321,14 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(False)
         self.addToolBar(toolbar)
 
+        # Home action - back to welcome screen
+        home_action = QAction("🏠 Home", self)
+        home_action.setShortcut("Ctrl+H")
+        home_action.triggered.connect(self.go_home)
+        toolbar.addAction(home_action)
+
+        toolbar.addSeparator()
+
         # File actions
         new_action = QAction("🆕 New", self)
         new_action.setShortcut("Ctrl+N")
@@ -1536,6 +1546,29 @@ class MainWindow(QMainWindow):
         </style>
         """
         self.preview.setHtml(css + html)
+
+    def go_home(self):
+        """Return to welcome screen."""
+        if self.has_unsaved_changes:
+            reply = QMessageBox.question(
+                self,
+                "Unsaved Changes",
+                "You have unsaved changes. Do you want to save before returning to home?",
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+            )
+            if reply == QMessageBox.Save:
+                self.save_note()
+            elif reply == QMessageBox.Cancel:
+                return
+
+        # Show welcome dialog
+        dialog = WelcomeDialog(self.manager, self)
+        dialog.fileSelected.connect(self.on_file_selected)
+        dialog.createNew.connect(self.on_create_new)
+        if dialog.exec() == QDialog.Accepted:
+            if self.current_file:
+                self.load_note()
+        dialog.deleteLater()
 
     def new_file(self):
         if self.has_unsaved_changes:
