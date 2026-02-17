@@ -111,7 +111,7 @@ def update_report_hash_index(daily_root: pathlib.Path, input_hash: str) -> None:
 
 
 def parse_frontmatter(text: str) -> Dict[str, str]:
-    lines = text.splitlines()
+    lines = text.lstrip().splitlines()
     if len(lines) < 3 or lines[0].strip() != "---":
         return {}
     data: Dict[str, str] = {}
@@ -126,7 +126,7 @@ def parse_frontmatter(text: str) -> Dict[str, str]:
 
 
 def extract_frontmatter_block(text: str) -> tuple[Dict[str, str], str]:
-    match = re.search(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
+    match = re.search(r"---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
     if not match:
         return {}, text
     block = match.group(1)
@@ -136,7 +136,7 @@ def extract_frontmatter_block(text: str) -> tuple[Dict[str, str], str]:
             continue
         key, val = line.split(":", 1)
         meta[key.strip().lower()] = val.strip()
-    stripped = text[match.end() :].lstrip()
+    stripped = (text[: match.start()] + text[match.end() :]).lstrip()
     return meta, stripped
 
 
