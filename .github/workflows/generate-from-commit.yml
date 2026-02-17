@@ -80,18 +80,7 @@ jobs:
             out="${outdir}/${DATE_UTC}-${slug}.md"
             
             # Skip if hash already exists in index
-            file_hash="$(python - <<'PY'
-            import sys
-
-            sys.path.append("scripts")
-            from generate_report import compute_hash_bytes
-
-            path = sys.argv[1]
-            with open(path, "rb") as f:
-                data = f.read()
-            print(compute_hash_bytes(data))
-            PY
-            "$file")"
+            file_hash="$(python -c "import sys; sys.path.append('scripts'); from generate_report import compute_hash_bytes; p=sys.argv[1]; data=open(p,'rb').read(); print(compute_hash_bytes(data))" "$file")"
 
             if [ -n "${KNOWN_HASHES[$file_hash]+x}" ]; then
               echo "Skipping $file (hash already generated)."
