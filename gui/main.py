@@ -656,7 +656,7 @@ class GenerateWeeklyDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {COLORS["success"]};
-                color: {COLORS["text_light"]};
+                color: {COLORS["text"]};
                 border: none;
                 border-radius: 6px;
                 padding: 12px 24px;
@@ -820,7 +820,7 @@ class EnvSettingsDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {COLORS["primary"]};
-                color: {COLORS["text_light"]};
+                color: {COLORS["text"]};
                 border: none;
                 border-radius: 6px;
                 padding: 10px 20px;
@@ -842,7 +842,7 @@ class EnvSettingsDialog(QDialog):
             }}
             QPushButton#danger {{
                 background-color: {COLORS["error"]};
-                color: {COLORS["text_light"]};
+                color: {COLORS["text"]};
             }}
             QTableWidget {{
                 background-color: {COLORS["surface"]};
@@ -1015,7 +1015,7 @@ class SyncDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {COLORS["primary"]};
-                color: {COLORS["text_light"]};
+                color: {COLORS["text"]};
                 border: none;
                 border-radius: 6px;
                 padding: 12px 24px;
@@ -1143,7 +1143,7 @@ class GenerateReportDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {COLORS["success"]};
-                color: {COLORS["text_light"]};
+                color: {COLORS["text"]};
                 border: none;
                 border-radius: 6px;
                 padding: 12px 24px;
@@ -1373,7 +1373,7 @@ class MainWindow(QMainWindow):
         # Spacer
         toolbar.addSeparator()
         spacer = QWidget()
-        spacer.setSizePolicy(spacer.sizePolicy().Expanding, spacer.sizePolicy().Preferred)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         toolbar.addWidget(spacer)
 
         # File info label
