@@ -33,7 +33,10 @@ Output requirements:
 
 
 def getenv(name: str, default: Optional[str] = None, required: bool = False) -> str:
-    value = os.getenv(name, default)
+    value = os.getenv(name)
+    # Treat empty string as unset, use default
+    if not value or value.strip() == "":
+        value = default
     if required and (value is None or str(value).strip() == ""):
         raise RuntimeError(f"Missing required env var: {name}")
     return value or ""
@@ -75,7 +78,9 @@ def replace_placeholders(obj: Any, mapping: Dict[str, str]) -> Any:
     return obj
 
 
-def build_default_payload(model: str, system_prompt: str, user_prompt: str) -> Dict[str, Any]:
+def build_default_payload(
+    model: str, system_prompt: str, user_prompt: str
+) -> Dict[str, Any]:
     payload: Dict[str, Any] = {
         "model": model if model else None,
         "messages": [
@@ -103,7 +108,9 @@ def call_cloud_api(user_prompt: str, system_prompt: str) -> str:
     # - New: REPORT_API_RESPONSE_PATHS (comma-separated)
     # - Old: REPORT_API_RESPONSE_PATH (single path)
     response_paths_csv = getenv("REPORT_API_RESPONSE_PATHS", "").strip()
-    legacy_response_path = getenv("REPORT_API_RESPONSE_PATH", "choices.0.message.content").strip()
+    legacy_response_path = getenv(
+        "REPORT_API_RESPONSE_PATH", "choices.0.message.content"
+    ).strip()
     if not response_paths_csv:
         response_paths_csv = legacy_response_path
 
@@ -113,7 +120,12 @@ def call_cloud_api(user_prompt: str, system_prompt: str) -> str:
     request_template_json = getenv("REPORT_API_REQUEST_TEMPLATE_JSON", "")
 
     # Whether to strip think/reasoning blocks from final text
-    strip_think = getenv("REPORT_STRIP_THINK", "true").lower() in ("1", "true", "yes", "on")
+    strip_think = getenv("REPORT_STRIP_THINK", "true").lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
 
     def _extract_first_available(data, paths_csv: str):
         paths = [p.strip() for p in paths_csv.split(",") if p.strip()]
@@ -154,7 +166,11 @@ def call_cloud_api(user_prompt: str, system_prompt: str) -> str:
                 if isinstance(item, dict):
                     item_type = str(item.get("type", "")).lower()
                     # Skip explicit reasoning blocks when requested
-                    if strip_think and item_type in {"reasoning", "thought", "thinking"}:
+                    if strip_think and item_type in {
+                        "reasoning",
+                        "thought",
+                        "thinking",
+                    }:
                         continue
                     if item_type == "text":
                         t = item.get("text", "")
@@ -263,7 +279,9 @@ def call_cloud_api(user_prompt: str, system_prompt: str) -> str:
     return text
 
 
-def build_user_prompt(raw_notes: str, source_type: str, source_id: str, date_str: str) -> str:
+def build_user_prompt(
+    raw_notes: str, source_type: str, source_id: str, date_str: str
+) -> str:
     return f"""Date: {date_str}
 Source: {source_type}:{source_id}
 
@@ -322,11 +340,15 @@ def ensure_minimum_sections(text: str, date_str: str) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate structured daily report from rough notes using cloud API.")
+    parser = argparse.ArgumentParser(
+        description="Generate structured daily report from rough notes using cloud API."
+    )
     parser.add_argument("--input", required=True, help="Path to rough note file")
     parser.add_argument("--output", required=True, help="Output markdown path")
     parser.add_argument("--date", default=dt.date.today().isoformat())
-    parser.add_argument("--source-type", default="manual", choices=["manual", "commit", "issue"])
+    parser.add_argument(
+        "--source-type", default="manual", choices=["manual", "commit", "issue"]
+    )
     parser.add_argument("--source-id", default="local")
     args = parser.parse_args()
 
@@ -338,7 +360,9 @@ def main() -> int:
     raw_notes = input_path.read_text(encoding="utf-8")
     system_prompt = getenv("REPORT_SYSTEM_PROMPT", DEFAULT_SYSTEM_PROMPT)
 
-    user_prompt = build_user_prompt(raw_notes, args.source_type, args.source_id, args.date)
+    user_prompt = build_user_prompt(
+        raw_notes, args.source_type, args.source_id, args.date
+    )
     text = call_cloud_api(user_prompt=user_prompt, system_prompt=system_prompt)
     text = ensure_minimum_sections(text, args.date)
 
