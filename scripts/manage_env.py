@@ -9,7 +9,7 @@ ENV_FILE = REPO_ROOT / ".env.secrets"
 
 # Known configuration keys for documentation/GUI hints
 KNOWN_KEYS = {
-    "OPENAI_API_KEY": "Required for report generation",
+    "REPORT_API_KEY": "Required for report generation",
     "REPORT_API_URL": "API Endpoint (default: OpenAI)",
     "REPORT_API_MODEL": "Model Name (e.g. gpt-4)",
     "REPORT_SYSTEM_PROMPT": "Custom system prompt override",
@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
     # set command
     set_parser = subparsers.add_parser("set", help="Set a variable")
-    set_parser.add_argument("key", help="Variable name (e.g. OPENAI_API_KEY)")
+    set_parser.add_argument("key", help="Variable name (e.g. REPORT_API_KEY)")
     set_parser.add_argument("value", help="Value")
 
     # get command
