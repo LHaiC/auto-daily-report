@@ -148,26 +148,28 @@ class WelcomeDialog(QDialog):
             QLineEdit:focus {{
                 border-color: {COLORS["primary"]};
             }}
-            /* Lists */
+            /* Lists - Card Style with Breathing Room */
             QListWidget {{
-                background-color: {COLORS["surface"]};
-                border: 1px solid {COLORS["border"]};
-                border-radius: 8px;
+                background-color: transparent;
+                border: none;
                 outline: none;
             }}
             QListWidget::item {{
-                padding: 12px;
-                border-radius: 6px;
-                margin: 4px 8px;
-                color: {COLORS["text"]};
+                background-color: #0f172a;
+                border: 1px solid #334155;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 8px;
+                color: #e2e8f0;
             }}
             QListWidget::item:hover {{
-                background-color: {COLORS["surface_bright"]};
+                background-color: #1e293b;
+                border-color: #38bdf8;
             }}
             QListWidget::item:selected {{
-                background-color: {COLORS["primary_dim"]};
-                color: {COLORS["primary"]};
-                border: 1px solid {COLORS["primary"]};
+                background-color: rgba(56, 189, 248, 0.15);
+                border: 1px solid #38bdf8;
+                color: #38bdf8;
             }}
             /* Text Labels */
             QLabel {{
@@ -209,7 +211,8 @@ class WelcomeDialog(QDialog):
         left_layout.setSpacing(16)
 
         new_title = QLabel("✨ Create New Note")
-        new_title.setStyleSheet("font-size: 18px; font-weight: bold;")
+        new_title.setStyleSheet("font-size: 18px; font-weight: bold; background-color: rgba(56, 189, 248, 0.1); padding: 8px; border-radius: 6px; color: #38bdf8;")
+        new_title.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
         left_layout.addWidget(new_title)
 
         # Name input
@@ -247,7 +250,8 @@ class WelcomeDialog(QDialog):
         right_layout.setSpacing(16)
 
         recent_title = QLabel("📚 Recent Notes")
-        recent_title.setStyleSheet("font-size: 18px; font-weight: bold;")
+        recent_title.setStyleSheet("font-size: 18px; font-weight: bold; background-color: rgba(56, 189, 248, 0.1); padding: 8px; border-radius: 6px; color: #38bdf8;")
+        recent_title.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
         right_layout.addWidget(recent_title)
 
         self.recent_list = QListWidget()
@@ -493,19 +497,20 @@ class FileBrowserDialog(QDialog):
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
-        self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.setSelectionMode(QTableWidget.ExtendedSelection)  # 多选模式
         self.table.doubleClicked.connect(self.on_open)
         layout.addWidget(self.table)
 
         # Buttons
         btn_layout = QHBoxLayout()
 
-        if self.mode == "reports":
-            delete_btn = QPushButton("🗑️ Delete Selected")
-            delete_btn.setObjectName("danger")
-            delete_btn.clicked.connect(self.on_delete)
-            btn_layout.addWidget(delete_btn)
+        # Delete button for both modes
+        delete_btn = QPushButton("🗑️ Delete Selected")
+        delete_btn.setObjectName("danger")
+        delete_btn.clicked.connect(self.on_delete_multi)
+        btn_layout.addWidget(delete_btn)
 
+        if self.mode == "reports":
             generate_weekly_btn = QPushButton("📅 Generate Weekly Summary")
             generate_weekly_btn.clicked.connect(self.on_generate_weekly)
             btn_layout.addWidget(generate_weekly_btn)
@@ -635,6 +640,74 @@ class FileBrowserDialog(QDialog):
                 self.load_files()
             else:
                 QMessageBox.critical(self, "Error", "Failed to delete report.")
+
+    def on_delete_multi(self):
+        """Delete multiple selected files."""
+        selected = self.table.selectedItems()
+        if not selected:
+            QMessageBox.information(self, "No Selection", "Please select files to delete.")
+            return
+
+        # Get unique rows
+        rows = set(item.row() for item in selected)
+        valid_rows = [r for r in rows if r < len(self.files_data)]
+
+        if not valid_rows:
+            return
+
+        # Prepare confirmation message
+        names = [self.files_data[r]["name"] for r in valid_rows]
+        if len(names) > 5:
+            display_names = "\n".join(names[:5]) + f"\n... and {len(names) - 5} more"
+        else:
+            display_names = "\n".join(names)
+
+        mode_text = "reports" if self.mode == "reports" else "scratch files"
+        reply = QMessageBox.question(
+            self,
+            "Confirm Delete",
+            f"Delete {len(names)} {mode_text}?\n\n{display_names}\n\nThis action cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No,
+        )
+
+        if reply != QMessageBox.Yes:
+            return
+
+        # Delete files
+        success_count = 0
+        failed_names = []
+
+        for row in valid_rows:
+            path = self.files_data[row]["path"]
+            name = self.files_data[row]["name"]
+
+            try:
+                if self.mode == "reports":
+                    if self.manager.delete_report(path):
+                        success_count += 1
+                    else:
+                        failed_names.append(name)
+                else:
+                    # Scratch mode - just delete the file
+                    path.unlink()
+                    success_count += 1
+            except Exception as e:
+                failed_names.append(f"{name} ({e})")
+
+        # Show result
+        if success_count > 0:
+            if self.mode == "reports":
+                self.reportDeleted.emit()
+            self.load_files()
+
+        if failed_names:
+            QMessageBox.critical(
+                self,
+                "Partial Error",
+                f"Deleted {success_count} files.\n\nFailed to delete:\n" + "\n".join(failed_names)
+            )
+        else:
+            QMessageBox.information(self, "Success", f"Successfully deleted {success_count} files.")
 
     def on_generate_weekly(self):
         dialog = GenerateWeeklyDialog(self.manager, self)
@@ -1334,11 +1407,6 @@ class MainWindow(QMainWindow):
         new_action.setShortcut("Ctrl+N")
         new_action.triggered.connect(self.new_file)
         toolbar.addAction(new_action)
-
-        open_action = QAction("📂 Open", self)
-        open_action.setShortcut("Ctrl+O")
-        open_action.triggered.connect(self.open_file_dialog)
-        toolbar.addAction(open_action)
 
         save_action = QAction("💾 Save", self)
         save_action.setShortcut(QKeySequence.Save)

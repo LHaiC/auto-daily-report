@@ -263,7 +263,6 @@ All tests mock `urllib.request.urlopen` -- no real network calls are made.
 ├── tests/
 │   ├── conftest.py
 │   └── test_*.py
-├── AGENTS.md
 ├── requirements-dev.txt
 └── README.md
 ```
