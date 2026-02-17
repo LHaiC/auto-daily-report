@@ -28,10 +28,31 @@ def load_env() -> dict:
 
     try:
         with open(ENV_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            content = f.read().strip()
+            if not content:
+                return {}
+            # Fix common JSON errors like trailing commas
+            content = _fix_json_errors(content)
+            return json.loads(content)
     except Exception as e:
         print(f"Error loading {ENV_FILE}: {e}", file=sys.stderr)
+        # Backup corrupted file
+        backup_path = ENV_FILE.with_suffix(".secrets.backup")
+        try:
+            import shutil
+            shutil.copy(ENV_FILE, backup_path)
+            print(f"Backup created at {backup_path}", file=sys.stderr)
+        except Exception:
+            pass
         return {}
+
+
+def _fix_json_errors(content: str) -> str:
+    """Fix common JSON formatting errors."""
+    import re
+    # Remove trailing commas before closing braces/brackets
+    content = re.sub(r',(\s*[}\]])', r'\1', content)
+    return content
 
 
 def get_env(key: str, default: str = None) -> str:

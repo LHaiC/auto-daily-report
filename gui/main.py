@@ -54,18 +54,20 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import manage_env
 
 
-# Modern color scheme
+# Modern color scheme - High contrast for readability
 COLORS = {
-    "primary": "#2196F3",
-    "primary_dark": "#1976D2",
-    "success": "#4CAF50",
-    "warning": "#FF9800",
-    "error": "#F44336",
-    "background": "#FAFAFA",
+    "primary": "#1976D2",  # Darker blue for better contrast
+    "primary_dark": "#0D47A1",
+    "success": "#2E7D32",  # Darker green
+    "warning": "#E65100",  # Darker orange
+    "error": "#C62828",    # Darker red
+    "background": "#F5F5F5",
     "surface": "#FFFFFF",
-    "text": "#212121",
-    "text_secondary": "#757575",
-    "border": "#E0E0E0",
+    "text": "#212121",           # Dark text for light backgrounds
+    "text_light": "#FFFFFF",     # Light text for dark backgrounds
+    "text_secondary": "#424242", # Darker gray for better readability
+    "text_muted": "#616161",
+    "border": "#BDBDBD",
 }
 
 
@@ -109,7 +111,7 @@ class WelcomeDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {COLORS["primary"]};
-                color: white;
+                color: {COLORS["text_light"]};
                 border: none;
                 border-radius: 8px;
                 padding: 14px 28px;
@@ -125,7 +127,7 @@ class WelcomeDialog(QDialog):
                 border: 2px solid {COLORS["primary"]};
             }}
             QPushButton#secondary:hover {{
-                background-color: rgba(33, 150, 243, 0.1);
+                background-color: rgba(25, 118, 210, 0.1);
             }}
             QLineEdit {{
                 background-color: {COLORS["surface"]};
@@ -133,6 +135,7 @@ class WelcomeDialog(QDialog):
                 border-radius: 8px;
                 padding: 12px;
                 font-size: 14px;
+                color: {COLORS["text"]};
             }}
             QLineEdit:focus {{
                 border-color: {COLORS["primary"]};
@@ -153,7 +156,7 @@ class WelcomeDialog(QDialog):
             }}
             QListWidget::item:selected {{
                 background-color: {COLORS["primary"]};
-                color: white;
+                color: {COLORS["text_light"]};
             }}
             QLabel {{
                 color: {COLORS["text"]};
@@ -388,7 +391,7 @@ class FileBrowserDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {COLORS["primary"]};
-                color: white;
+                color: {COLORS["text_light"]};
                 border: none;
                 border-radius: 6px;
                 padding: 10px 20px;
@@ -399,6 +402,7 @@ class FileBrowserDialog(QDialog):
             }}
             QPushButton#danger {{
                 background-color: {COLORS["error"]};
+                color: {COLORS["text_light"]};
             }}
             QPushButton#secondary {{
                 background-color: transparent;
@@ -635,23 +639,28 @@ class GenerateWeeklyDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {COLORS["success"]};
-                color: white;
+                color: {COLORS["text_light"]};
                 border: none;
                 border-radius: 6px;
                 padding: 12px 24px;
                 font-weight: 500;
             }}
             QPushButton:hover {{
-                background-color: #45a049;
+                background-color: #1B5E20;
             }}
             QPushButton:disabled {{
                 background-color: {COLORS["border"]};
+                color: {COLORS["text_muted"]};
             }}
             QComboBox {{
                 background-color: {COLORS["surface"]};
                 border: 1px solid {COLORS["border"]};
                 border-radius: 6px;
                 padding: 8px;
+                color: {COLORS["text"]};
+            }}
+            QLabel {{
+                color: {COLORS["text"]};
             }}
         """)
 
@@ -793,7 +802,7 @@ class EnvSettingsDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {COLORS["primary"]};
-                color: white;
+                color: {COLORS["text_light"]};
                 border: none;
                 border-radius: 6px;
                 padding: 10px 20px;
@@ -811,10 +820,11 @@ class EnvSettingsDialog(QDialog):
                 border: 1px solid {COLORS["primary"]};
             }}
             QPushButton#secondary:hover {{
-                background-color: rgba(33, 150, 243, 0.1);
+                background-color: rgba(25, 118, 210, 0.1);
             }}
             QPushButton#danger {{
                 background-color: {COLORS["error"]};
+                color: {COLORS["text_light"]};
             }}
             QTableWidget {{
                 background-color: {COLORS["surface"]};
@@ -987,7 +997,7 @@ class SyncDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {COLORS["primary"]};
-                color: white;
+                color: {COLORS["text_light"]};
                 border: none;
                 border-radius: 6px;
                 padding: 12px 24px;
@@ -999,7 +1009,7 @@ class SyncDialog(QDialog):
             }}
             QPushButton:disabled {{
                 background-color: {COLORS["border"]};
-                color: {COLORS["text_secondary"]};
+                color: {COLORS["text_muted"]};
             }}
             QPushButton#secondary {{
                 background-color: transparent;
@@ -1115,7 +1125,7 @@ class GenerateReportDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {COLORS["success"]};
-                color: white;
+                color: {COLORS["text_light"]};
                 border: none;
                 border-radius: 6px;
                 padding: 12px 24px;
@@ -1123,11 +1133,11 @@ class GenerateReportDialog(QDialog):
                 font-size: 14px;
             }}
             QPushButton:hover {{
-                background-color: #45a049;
+                background-color: #1B5E20;
             }}
             QPushButton:disabled {{
                 background-color: {COLORS["border"]};
-                color: {COLORS["text_secondary"]};
+                color: {COLORS["text_muted"]};
             }}
             QPushButton#secondary {{
                 background-color: transparent;
@@ -1270,9 +1280,10 @@ class MainWindow(QMainWindow):
                 padding: 8px 16px;
                 color: {COLORS["text"]};
                 font-weight: 500;
+                font-size: 13px;
             }}
             QToolButton:hover {{
-                background-color: rgba(33, 150, 243, 0.1);
+                background-color: rgba(25, 118, 210, 0.1);
                 color: {COLORS["primary"]};
             }}
             QStatusBar {{
@@ -1280,9 +1291,16 @@ class MainWindow(QMainWindow):
                 border-top: 1px solid {COLORS["border"]};
                 color: {COLORS["text_secondary"]};
                 padding: 4px;
+                font-size: 12px;
             }}
             QSplitter::handle {{
                 background-color: {COLORS["border"]};
+            }}
+            QWidget {{
+                color: {COLORS["text"]};
+            }}
+            QLabel {{
+                color: {COLORS["text"]};
             }}
         """)
 
@@ -1393,6 +1411,9 @@ class MainWindow(QMainWindow):
                 border: 1px solid {COLORS["border"]};
                 border-radius: 8px;
                 padding: 16px;
+                color: {COLORS["text"]};
+                font-size: 14px;
+                line-height: 1.6;
             }}
         """)
         preview_layout.addWidget(self.preview)
