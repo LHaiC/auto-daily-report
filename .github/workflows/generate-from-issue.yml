@@ -31,14 +31,44 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           python - <<'PY'
-          import os, pathlib, datetime
+          import os
+          import pathlib
+          import datetime
+
           num = os.environ["ISSUE_NUMBER"]
-          title = os.environ.get("ISSUE_TITLE","")
-          body = os.environ.get("ISSUE_BODY","") or ""
+          title = os.environ.get("ISSUE_TITLE", "")
+          body = os.environ.get("ISSUE_BODY", "") or ""
+
+          lines = body.splitlines()
+          cleaned = []
+
+          in_rough_notes = False
+          for line in lines:
+              if line.strip().lower().startswith("### rough notes"):
+                  in_rough_notes = True
+                  continue
+              if line.strip().startswith("### ") and in_rough_notes:
+                  break
+              if in_rough_notes:
+                  cleaned.append(line)
+
+          if not cleaned:
+              for line in lines:
+                  if line.strip().startswith("### "):
+                      continue
+                  if line.strip().startswith("- ["):
+                      continue
+                  cleaned.append(line)
+
+          cleaned_body = "\n".join([ln for ln in cleaned]).strip()
+          if not cleaned_body:
+              cleaned_body = body.strip()
+
           p = pathlib.Path("scratch") / f"issue-{num}.md"
           p.parent.mkdir(parents=True, exist_ok=True)
-          p.write_text(f"# {title}\n\n{body}\n", encoding="utf-8")
+          p.write_text(f"# {title}\n\n{cleaned_body}\n", encoding="utf-8")
           print(f"wrote {p}")
+
           now = datetime.datetime.utcnow()
           report_dir = pathlib.Path("content/daily") / now.strftime("%Y") / now.strftime("%m")
           report_dir.mkdir(parents=True, exist_ok=True)
