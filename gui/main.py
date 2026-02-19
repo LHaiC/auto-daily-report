@@ -84,6 +84,7 @@ class MainWindow(QMainWindow):
         self.manager = manager
         self.current_file = current_file
         self.has_unsaved_changes = False
+        self.is_new_file = False  # Track if file was newly created
         self.theme_manager = ThemeManager("dark")
         self.shortcuts = load_shortcuts()
 
@@ -430,7 +431,7 @@ class MainWindow(QMainWindow):
             full_path.write_text(f"# {path}\n\n", encoding="utf-8")
             self.load_file(full_path)
 
-    def load_file(self, path: Path):
+    def load_file(self, path: Path, is_new: bool = False):
         """Load a file into editor."""
         try:
             # Stop watching previous file
@@ -442,6 +443,7 @@ class MainWindow(QMainWindow):
             self.current_file = path
             self.last_content = content
             self.has_unsaved_changes = False
+            self.is_new_file = is_new
 
             # Watch the file for external changes
             if self.file_watcher:
@@ -505,12 +507,24 @@ class MainWindow(QMainWindow):
             reply = confirm_unsaved_changes(self)
             if reply == QMessageBox.Save:
                 self.save_file()
+            elif reply == QMessageBox.Discard:
+                # Delete newly created file if user chooses to discard changes
+                if (
+                    self.is_new_file
+                    and self.current_file
+                    and self.current_file.exists()
+                ):
+                    try:
+                        self.current_file.unlink()
+                    except Exception:
+                        pass
             elif reply == QMessageBox.Cancel:
                 return
 
         self.editor.clear()
         self.current_file = None
         self.has_unsaved_changes = False
+        self.is_new_file = False
         self.status_bar.set_file(None)
 
     def go_home(self):
@@ -521,6 +535,17 @@ class MainWindow(QMainWindow):
             reply = confirm_unsaved_changes(self)
             if reply == QMessageBox.Save:
                 self.save_file()
+            elif reply == QMessageBox.Discard:
+                # Delete newly created file if user chooses to discard changes
+                if (
+                    self.is_new_file
+                    and self.current_file
+                    and self.current_file.exists()
+                ):
+                    try:
+                        self.current_file.unlink()
+                    except Exception:
+                        pass
             elif reply == QMessageBox.Cancel:
                 return
 
@@ -533,7 +558,7 @@ class MainWindow(QMainWindow):
         """Handle new file creation from welcome dialog."""
         try:
             path = self.manager.create_scratch_note(name, date_str)
-            self.load_file(path)
+            self.load_file(path, is_new=True)
         except Exception as e:
             show_error(self, "Error", f"Failed to create note: {e}")
 
@@ -649,6 +674,17 @@ class MainWindow(QMainWindow):
             reply = confirm_unsaved_changes(self)
             if reply == QMessageBox.Save:
                 self.save_file()
+            elif reply == QMessageBox.Discard:
+                # Delete newly created file if user chooses to discard changes
+                if (
+                    self.is_new_file
+                    and self.current_file
+                    and self.current_file.exists()
+                ):
+                    try:
+                        self.current_file.unlink()
+                    except Exception:
+                        pass  # Best effort deletion
             elif reply == QMessageBox.Cancel:
                 event.ignore()
                 return
@@ -697,7 +733,7 @@ def main():
     welcome.fileSelected.connect(on_file_selected)
     welcome.createNew.connect(on_create_new)
 
-    if welcome.exec() != welcome.Accepted:
+    if welcome.exec() != welcome.accepted:
         return
 
     if not current_file:
