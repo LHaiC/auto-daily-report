@@ -98,11 +98,14 @@ class MainWindow(QMainWindow):
         self.setup_autosave()
         self.setup_file_watcher()
 
-        # Load initial file
-        if current_file:
+        # Load initial file or show empty editor
+        if current_file and current_file.exists():
             self.load_file(current_file)
         else:
-            self.create_new_file()
+            # Show empty editor for new file
+            self.editor.setPlainText(f"# Notes for {dt.date.today().isoformat()}\n\n")
+            self.status_bar.set_file(None)
+            self.status_bar.update_stats("")
 
     def setup_file_watcher(self):
         """Setup file system watcher for external file changes."""
@@ -171,15 +174,19 @@ class MainWindow(QMainWindow):
         toolbar = QToolBar("Editor Tools")
         toolbar.setMovable(False)
         toolbar.setStyleSheet("""
-            QToolBar { spacing: 8px; }
+            QToolBar { spacing: 16px; padding: 4px; }
+            QToolBar::separator {
+                width: 16px;
+            }
             QPushButton {
                 background-color: #1e293b;
                 color: #f8fafc;
                 border: 1px solid #334155;
                 border-radius: 4px;
-                padding: 6px 12px;
+                padding: 6px 14px;
                 font-weight: bold;
-                min-width: 32px;
+                min-width: 36px;
+                margin-right: 8px;
             }
             QPushButton:hover {
                 background-color: #334155;
@@ -189,7 +196,7 @@ class MainWindow(QMainWindow):
 
         # Cursor position
         self.cursor_label = QLabel("📍 1:1")
-        self.cursor_label.setStyleSheet("padding: 0 8px;")
+        self.cursor_label.setStyleSheet("padding: 0 12px; color: #94a3b8;")
         self.cursor_label.setToolTip("Cursor position (line:column)")
         toolbar.addWidget(self.cursor_label)
 
@@ -198,26 +205,50 @@ class MainWindow(QMainWindow):
         # Editor actions with proper buttons
         bold_btn = QPushButton("B")
         bold_btn.setToolTip("Bold (Ctrl+B)")
-        bold_btn.clicked.connect(lambda: self.insert_text("**bold**", 2, 6))
+        bold_btn.clicked.connect(lambda: self.wrap_selection("**", "**"))
         toolbar.addWidget(bold_btn)
 
         italic_btn = QPushButton("I")
         italic_btn.setToolTip("Italic (Ctrl+I)")
         italic_btn.setStyleSheet("font-style: italic;")
-        italic_btn.clicked.connect(lambda: self.insert_text("*italic*", 1, 7))
+        italic_btn.clicked.connect(lambda: self.wrap_selection("*", "*"))
         toolbar.addWidget(italic_btn)
 
         code_btn = QPushButton("<>")
         code_btn.setToolTip("Inline code")
-        code_btn.clicked.connect(lambda: self.insert_text("`code`", 1, 5))
+        code_btn.clicked.connect(lambda: self.wrap_selection("`", "`"))
         toolbar.addWidget(code_btn)
 
         quote_btn = QPushButton("❝")
         quote_btn.setToolTip("Quote")
-        quote_btn.clicked.connect(lambda: self.insert_text("> quote", 2, 7))
+        quote_btn.clicked.connect(self.insert_quote)
         toolbar.addWidget(quote_btn)
 
         return toolbar
+
+    def wrap_selection(self, prefix: str, suffix: str):
+        """Wrap selected text with prefix/suffix, or insert at cursor if no selection."""
+        cursor = self.editor.textCursor()
+        selected_text = cursor.selectedText()
+
+        if selected_text:
+            # Wrap selected text
+            cursor.insertText(f"{prefix}{selected_text}{suffix}")
+        else:
+            # Insert with placeholder
+            cursor.insertText(f"{prefix}text{suffix}")
+            # Select the placeholder
+            cursor.setPosition(cursor.position() - len(suffix) - 4)
+            cursor.movePosition(cursor.Right, cursor.KeepAnchor, 4)
+            self.editor.setTextCursor(cursor)
+
+        self.editor.setFocus()
+
+    def insert_quote(self):
+        """Insert a quote block."""
+        cursor = self.editor.textCursor()
+        cursor.insertText("> ")
+        self.editor.setFocus()
 
     def create_preview_toolbar(self):
         """Create toolbar for preview panel."""
@@ -642,8 +673,38 @@ def main():
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     manager = NoteManager(repo_root)
 
-    # Create main window
-    window = MainWindow(manager)
+    # Show welcome dialog first
+    from components import WelcomeDialog
+
+    welcome = WelcomeDialog(manager)
+    welcome.setModal(False)  # Allow interaction with main window after
+
+    current_file = None
+
+    def on_file_selected(path):
+        nonlocal current_file
+        current_file = path
+
+    def on_create_new(name, date_str):
+        nonlocal current_file
+        try:
+            current_file = manager.create_scratch_note(name, date_str)
+        except Exception as e:
+            from PySide6.QtWidgets import QMessageBox
+
+            QMessageBox.critical(None, "Error", f"Failed to create note: {e}")
+
+    welcome.fileSelected.connect(on_file_selected)
+    welcome.createNew.connect(on_create_new)
+
+    if welcome.exec() != welcome.Accepted:
+        return
+
+    if not current_file:
+        return
+
+    # Create main window with selected file
+    window = MainWindow(manager, current_file)
     window.show()
 
     sys.exit(app.exec())
