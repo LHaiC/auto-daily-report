@@ -166,23 +166,56 @@ class MainWindow(QMainWindow):
 
     def create_editor_toolbar(self):
         """Create toolbar for editor panel."""
-        from PySide6.QtWidgets import QToolBar, QLabel
+        from PySide6.QtWidgets import QToolBar, QLabel, QPushButton
 
         toolbar = QToolBar("Editor Tools")
         toolbar.setMovable(False)
+        toolbar.setStyleSheet("""
+            QToolBar { spacing: 8px; }
+            QPushButton {
+                background-color: #1e293b;
+                color: #f8fafc;
+                border: 1px solid #334155;
+                border-radius: 4px;
+                padding: 6px 12px;
+                font-weight: bold;
+                min-width: 32px;
+            }
+            QPushButton:hover {
+                background-color: #334155;
+                border-color: #38bdf8;
+            }
+        """)
 
         # Cursor position
         self.cursor_label = QLabel("📍 1:1")
+        self.cursor_label.setStyleSheet("padding: 0 8px;")
         self.cursor_label.setToolTip("Cursor position (line:column)")
         toolbar.addWidget(self.cursor_label)
 
         toolbar.addSeparator()
 
-        # Editor actions
-        toolbar.addAction("B", lambda: self.insert_text("**bold**", 2, 6))
-        toolbar.addAction("I", lambda: self.insert_text("*italic*", 1, 7))
-        toolbar.addAction("`", lambda: self.insert_text("`code`", 1, 5))
-        toolbar.addAction(">", lambda: self.insert_text("> quote", 2, 7))
+        # Editor actions with proper buttons
+        bold_btn = QPushButton("B")
+        bold_btn.setToolTip("Bold (Ctrl+B)")
+        bold_btn.clicked.connect(lambda: self.insert_text("**bold**", 2, 6))
+        toolbar.addWidget(bold_btn)
+
+        italic_btn = QPushButton("I")
+        italic_btn.setToolTip("Italic (Ctrl+I)")
+        italic_btn.setStyleSheet("font-style: italic;")
+        italic_btn.clicked.connect(lambda: self.insert_text("*italic*", 1, 7))
+        toolbar.addWidget(italic_btn)
+
+        code_btn = QPushButton("<>")
+        code_btn.setToolTip("Inline code")
+        code_btn.clicked.connect(lambda: self.insert_text("`code`", 1, 5))
+        toolbar.addWidget(code_btn)
+
+        quote_btn = QPushButton("❝")
+        quote_btn.setToolTip("Quote")
+        quote_btn.clicked.connect(lambda: self.insert_text("> quote", 2, 7))
+        toolbar.addWidget(quote_btn)
 
         return toolbar
 
@@ -216,6 +249,8 @@ class MainWindow(QMainWindow):
         # File menu
         file_menu = menubar.addMenu("&File")
 
+        file_menu.addAction("&Home", self.go_home, QKeySequence("Ctrl+Shift+H"))
+        file_menu.addSeparator()
         file_menu.addAction("&New", self.create_new_file, QKeySequence("Ctrl+N"))
         file_menu.addAction("&Open...", self.browse_scratch, QKeySequence("Ctrl+O"))
         file_menu.addAction("&Save", self.save_file, QKeySequence("Ctrl+S"))
@@ -447,6 +482,30 @@ class MainWindow(QMainWindow):
         self.has_unsaved_changes = False
         self.status_bar.set_file(None)
 
+    def go_home(self):
+        """Return to welcome screen."""
+        from components import WelcomeDialog
+
+        if self.has_unsaved_changes:
+            reply = confirm_unsaved_changes(self)
+            if reply == QMessageBox.Save:
+                self.save_file()
+            elif reply == QMessageBox.Cancel:
+                return
+
+        dialog = WelcomeDialog(self.manager, self)
+        dialog.fileSelected.connect(self.load_file)
+        dialog.createNew.connect(self.on_create_new_from_welcome)
+        dialog.exec()
+
+    def on_create_new_from_welcome(self, name: str, date_str: str):
+        """Handle new file creation from welcome dialog."""
+        try:
+            path = self.manager.create_scratch_note(name, date_str)
+            self.load_file(path)
+        except Exception as e:
+            show_error(self, "Error", f"Failed to create note: {e}")
+
     def autosave(self):
         """Auto-save current file."""
         if not self.has_unsaved_changes or not self.current_file:
@@ -467,8 +526,10 @@ class MainWindow(QMainWindow):
         # Select part of inserted text (for editing)
         if select_start != select_end:
             cursor.setPosition(cursor.position() - len(text) + select_start)
+            from PySide6.QtGui import QTextCursor
+
             cursor.movePosition(
-                cursor.Right, cursor.KeepAnchor, select_end - select_start
+                QTextCursor.Right, QTextCursor.KeepAnchor, select_end - select_start
             )
             self.editor.setTextCursor(cursor)
 
